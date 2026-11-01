@@ -35,7 +35,10 @@ management:
     web:
       exposure:
         include: health,info
-
+quickcart:
+  jwt:
+    secret: ${JWT_SECRET}          # secret: no default, min 32 chars
+    issuer: quickcart-user-service
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
