@@ -1,0 +1,47 @@
+plugins {
+    id 'org.springframework.boot' version '3.3.5' apply false
+    id 'io.spring.dependency-management' version '1.1.6' apply false
+    id 'com.google.cloud.tools.jib' version '3.4.4' apply false
+}
+
+ext {
+    springCloudVersion = '2023.0.3'
+}
+
+subprojects {
+    apply plugin: 'java'
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'com.google.cloud.tools.jib'
+
+    group = 'com.quickcart'
+    version = '0.0.1'
+
+    java {
+        toolchain { languageVersion = JavaLanguageVersion.of(21) }
+    }
+
+    repositories { mavenCentral() }
+
+    dependencyManagement {
+        imports {
+            mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+        }
+    }
+
+    jib {
+        from {
+            image = 'eclipse-temurin:21-jre'
+        }
+        to {
+            image = "quickcart/${project.name}"
+            tags = ['latest']
+        }
+        container {
+            user = '1000'                      // non-root (Section 13.1)
+            creationTime = 'USE_CURRENT_TIMESTAMP'
+        }
+    }
+
+    tasks.withType(Test).configureEach { useJUnitPlatform() }
+}

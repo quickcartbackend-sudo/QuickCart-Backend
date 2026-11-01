@@ -1,0 +1,135 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${POSTGRES_SUPERUSER:?set in .env}
+      POSTGRES_PASSWORD: ${POSTGRES_SUPERUSER_PASSWORD:?set in .env}
+      USER_DB_PASSWORD: ${USER_DB_PASSWORD:?set in .env}
+      CATALOG_DB_PASSWORD: ${CATALOG_DB_PASSWORD:?set in .env}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:?set in .env}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./infra/postgres/init:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_SUPERUSER} -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+  discovery-server:
+    image: quickcart/discovery-server:latest   # built by Jib, not by Compose
+    pull_policy: never                         # never look for it on Docker Hub
+    environment:
+      SERVER_PORT: 8761
+      EUREKA_HOSTNAME: discovery-server
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms64m -Xmx192m}   # JVM reads this natively
+    ports:
+      - "8761:8761"
+    healthcheck:
+      # temurin-jre has bash but no curl/wget, so use bash's /dev/tcp
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8761 && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '\"status\":\"UP\"' <&3"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 40s
+  user-service:
+    image: quickcart/user-service:latest      # built by Jib
+    pull_policy: never
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8081
+      EUREKA_URL: http://discovery-server:8761/eureka
+      DB_URL: jdbc:postgresql://postgres:5432/user_db
+      DB_USERNAME: user_svc
+      DB_PASSWORD: ${USER_DB_PASSWORD:?set in .env}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms64m -Xmx192m}
+      JWT_SECRET: ${JWT_SECRET:?set in .env}
+      JWT_EXPIRY_SECONDS: ${JWT_EXPIRY_SECONDS:-3600}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@quickcart.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?set in .env}
+    ports:
+      - "8081:8081"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8081 && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '\"status\":\"UP\"' <&3"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 60s
+  catalog-service:
+    image: quickcart/catalog-service:latest   # built by Jib
+    pull_policy: never
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8082
+      EUREKA_URL: http://discovery-server:8761/eureka
+      DB_URL: jdbc:postgresql://postgres:5432/catalog_db
+      DB_USERNAME: catalog_svc
+      DB_PASSWORD: ${CATALOG_DB_PASSWORD:?set in .env}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms64m -Xmx192m}
+    ports:
+      - "8082:8082"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8082 && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '\"status\":\"UP\"' <&3"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 60s
+  order-service:
+    image: quickcart/order-service:latest     # built by Jib
+    pull_policy: never
+    depends_on:
+      postgres:
+        condition: service_healthy
+      discovery-server:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8083
+      EUREKA_URL: http://discovery-server:8761/eureka
+      DB_URL: jdbc:postgresql://postgres:5432/order_db
+      DB_USERNAME: order_svc
+      DB_PASSWORD: ${ORDER_DB_PASSWORD:?set in .env}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms64m -Xmx192m}
+    ports:
+      - "8083:8083"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8083 && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '\"status\":\"UP\"' <&3"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 60s
+  api-gateway:
+    image: quickcart/api-gateway:latest       # built by Jib
+    pull_policy: never
+    depends_on:
+      discovery-server:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SERVER_PORT: 8080
+      EUREKA_URL: http://discovery-server:8761/eureka
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:5173,http://localhost:3000}
+      JAVA_TOOL_OPTIONS: ${JAVA_OPTS:--Xms64m -Xmx192m}
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8080 && printf 'GET /actuator/health HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q '\"status\":\"UP\"' <&3"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 60s
+volumes:
+  pgdata:

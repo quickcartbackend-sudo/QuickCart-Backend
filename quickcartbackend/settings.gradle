@@ -1,0 +1,3 @@
+rootProject.name = 'quickcart-backend'
+include 'discovery-server', 'api-gateway', 'user-service', 'catalog-service', 'order-service'
+// api-gateway, catalog-service, order-service are added as their units are built
