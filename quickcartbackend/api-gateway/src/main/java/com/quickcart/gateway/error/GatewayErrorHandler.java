@@ -94,11 +94,19 @@ public class GatewayErrorHandler implements ErrorWebExceptionHandler {
         }
     }
 
-    private HttpStatus resolveStatus(Throwable ex) {
-        if (ex instanceof ResponseStatusException rse) {
-            HttpStatus resolved = HttpStatus.resolve(rse.getStatusCode().value());
-            if (resolved != null) {
-                return resolved;
+        private HttpStatus resolveStatus(Throwable ex) {
+        Throwable t = ex;
+        for (int depth = 0; t != null && depth < 10; depth++, t = t.getCause()) {
+            if (t instanceof ResponseStatusException rse) {
+                HttpStatus resolved = HttpStatus.resolve(rse.getStatusCode().value());
+                if (resolved != null) {
+                    return resolved;
+                }
+            }
+            if (t instanceof java.net.ConnectException
+                    || t instanceof java.util.concurrent.TimeoutException
+                    || t instanceof reactor.netty.http.client.PrematureCloseException) {
+                return HttpStatus.SERVICE_UNAVAILABLE;
             }
         }
         return HttpStatus.INTERNAL_SERVER_ERROR;

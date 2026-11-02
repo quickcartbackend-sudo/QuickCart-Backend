@@ -51,4 +51,4 @@ quickcart:
     read-timeout-ms: ${CATALOG_READ_TIMEOUT_MS:5000}
   jwt:
     secret: ${JWT_SECRET}          # secret: no default, min 32 chars
-    issuer: quickcart-order-service
+    issuer: quickcart-user-service
