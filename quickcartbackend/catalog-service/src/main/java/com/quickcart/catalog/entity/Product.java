@@ -1,0 +1,95 @@
+package com.quickcart.catalog.entity;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.Instant;
+
+@Entity
+@Table(name = "products")
+public class Product {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "category_id", nullable = false)
+    private Category category;
+
+    @Column(nullable = false, length = 150)
+    private String name;
+
+    @Column(length = 1000)
+    private String description;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal price;
+
+    @Column(nullable = false, length = 30)
+    private String unit;
+
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
+    @Column(nullable = false)
+    private boolean active = true;
+
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Instant createdAt;
+
+    @Column(name = "updated_at", nullable = false)
+    private Instant updatedAt;
+
+    protected Product() { }
+
+    public Product(Category category, String name, String description, BigDecimal price,
+                   String unit, String imageUrl) {
+        this.category = category;
+        this.name = name;
+        this.description = description;
+        this.price = price.setScale(2, RoundingMode.HALF_UP);
+        this.unit = unit;
+        this.imageUrl = imageUrl;
+        this.createdAt = Instant.now();
+        this.updatedAt = this.createdAt;
+    }
+
+    public void updateDetails(Category category, String name, String description, String unit, String imageUrl) {
+        this.category = category;
+        this.name = name;
+        this.description = description;
+        this.unit = unit;
+        this.imageUrl = imageUrl;
+        this.updatedAt = Instant.now();
+    }
+
+    public void changePrice(BigDecimal price) {
+        this.price = price.setScale(2, RoundingMode.HALF_UP);
+        this.updatedAt = Instant.now();
+    }
+
+    public void setActive(boolean active) {
+        this.active = active;
+        this.updatedAt = Instant.now();
+    }
+
+    public Long getId() { return id; }
+    public Category getCategory() { return category; }
+    public String getName() { return name; }
+    public String getDescription() { return description; }
+    public BigDecimal getPrice() { return price; }
+    public String getUnit() { return unit; }
+    public String getImageUrl() { return imageUrl; }
+    public boolean isActive() { return active; }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
+}

@@ -1,9 +1,12 @@
 package com.quickcart.catalog.config;
 
+import com.quickcart.catalog.security.InternalApiKeyFilter;
 import com.quickcart.catalog.security.JwtAuthenticationFilter;
 import com.quickcart.catalog.security.JwtVerifier;
 import com.quickcart.catalog.security.RestAccessDeniedHandler;
 import com.quickcart.catalog.security.RestAuthenticationEntryPoint;
+import com.quickcart.catalog.security.SecurityErrorWriter;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,8 +24,11 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http,
                                             JwtVerifier verifier,
+                                            SecurityErrorWriter errorWriter,
                                             RestAuthenticationEntryPoint entryPoint,
-                                            RestAccessDeniedHandler accessDeniedHandler) throws Exception {
+                                            RestAccessDeniedHandler accessDeniedHandler,
+                                            @Value("${quickcart.internal.api-key}") String internalApiKey)
+            throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
@@ -36,10 +42,11 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/categories/**", "/api/v1/products/**").permitAll()
                         .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
-                        // /internal/** needs the X-Internal-Api-Key filter (step 5/7); until then it
-                        // falls here and answers 401 without a JWT, which is also the contract's missing-key result
+                        .requestMatchers("/internal/**").hasRole("INTERNAL")   // granted only by InternalApiKeyFilter
                         .anyRequest().authenticated())
-                .addFilterBefore(new JwtAuthenticationFilter(verifier), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtAuthenticationFilter(verifier), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new InternalApiKeyFilter(internalApiKey, errorWriter),
+                        UsernamePasswordAuthenticationFilter.class);
         return http.build();
     }
 }
