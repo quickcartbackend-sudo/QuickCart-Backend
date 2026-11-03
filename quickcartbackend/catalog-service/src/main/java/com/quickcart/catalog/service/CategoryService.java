@@ -66,11 +66,11 @@ public class CategoryService {
         }
     }
 
-    @Transactional
+        @Transactional
     public CategoryResponse setActive(long id, boolean active) {               // A4
         Category category = find(id);
         category.setActive(active);
-        return mapper.toCategory(category);
+        return mapper.toCategory(repository.saveAndFlush(category));
     }
 
     private Category find(long id) {

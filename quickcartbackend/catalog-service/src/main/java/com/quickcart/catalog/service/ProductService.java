@@ -105,27 +105,27 @@ public class ProductService {
         return mapper.toAdminProduct(product, quantity);
     }
 
-    @Transactional
+        @Transactional
     public AdminProductResponse update(long id, ProductUpdateRequest req) {
         Product product = find(id);
         product.updateDetails(findCategory(req.categoryId()), req.name().trim(),
                 QueryUtils.blankToNull(req.description()), req.unit().trim(),
                 QueryUtils.blankToNull(req.imageUrl()));
-        return toAdmin(product);
+        return toAdmin(productRepository.saveAndFlush(product));
     }
 
     @Transactional
     public AdminProductResponse updatePrice(long id, PriceRequest req) {
         Product product = find(id);
         product.changePrice(req.price());
-        return toAdmin(product);
+        return toAdmin(productRepository.saveAndFlush(product));
     }
 
     @Transactional
     public AdminProductResponse setActive(long id, boolean active) {
         Product product = find(id);
         product.setActive(active);
-        return toAdmin(product);
+        return toAdmin(productRepository.saveAndFlush(product));
     }
 
     // ------------------------------------------------------------------ internal (I1)

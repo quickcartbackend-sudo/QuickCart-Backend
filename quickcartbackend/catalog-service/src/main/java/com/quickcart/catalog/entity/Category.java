@@ -6,11 +6,16 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import java.time.Instant;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+@Getter
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
 @Entity
 @Table(name = "categories")
-public class Category {
+public class Category extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -25,40 +30,19 @@ public class Category {
     @Column(name = "image_url", length = 500)
     private String imageUrl;
 
+    @Setter
     @Column(nullable = false)
     private boolean active = true;
-
-    @Column(name = "created_at", nullable = false, updatable = false)
-    private Instant createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private Instant updatedAt;
-
-    protected Category() { }
 
     public Category(String name, String description, String imageUrl) {
         this.name = name;
         this.description = description;
         this.imageUrl = imageUrl;
-        this.createdAt = Instant.now();
-        this.updatedAt = this.createdAt;
     }
 
     public void update(String name, String description, String imageUrl) {
         this.name = name;
         this.description = description;
         this.imageUrl = imageUrl;
-        this.updatedAt = Instant.now();
     }
-
-    public void setActive(boolean active) {
-        this.active = active;
-        this.updatedAt = Instant.now();
-    }
-
-    public Long getId() { return id; }
-    public String getName() { return name; }
-    public String getDescription() { return description; }
-    public String getImageUrl() { return imageUrl; }
-    public boolean isActive() { return active; }
 }

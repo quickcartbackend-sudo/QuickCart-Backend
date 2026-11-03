@@ -52,3 +52,5 @@ quickcart:
   jwt:
     secret: ${JWT_SECRET}          # secret: no default, min 32 chars
     issuer: quickcart-user-service
+  internal:
+    api-key: ${INTERNAL_API_KEY}     # secret: no default
